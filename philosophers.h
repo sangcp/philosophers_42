@@ -19,6 +19,9 @@
 # include <string.h>
 # include <sys/time.h>
 
+# define DEAD 0
+# define ALIVE 1
+
 typedef struct	s_data
 {
 	int				nb_phil;
