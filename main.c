@@ -28,7 +28,7 @@ void philo_write(t_philo *philo, char *s)
 {
 	pthread_mutex_lock(&philo->data->pen);
 	//printf("%lu\t%d %s\n", get_time() - philo->data->starttime, philo->id, s);
-	printf("%d %s\n", philo->id, s);
+	printf("%lu\t%d %s\n", (get_time() - philo->data->starttime), philo->id, s);
 	pthread_mutex_unlock(&philo->data->pen);
 }
 
@@ -94,6 +94,7 @@ int parsing(t_data *data, int ac, char **av)
 	data->time_to_eat = ft_atoi(av[3]);
 	data->time_to_sleep = ft_atoi(av[4]);
 	data->state = ALIVE;
+	data->eat_times = 0;
 	if (ac == 6)
 		data->eat_times = ft_atoi(av[5]);
 	data->forks = malloc(sizeof(pthread_mutex_t) * data->nb_phil);
@@ -105,6 +106,7 @@ int parsing(t_data *data, int ac, char **av)
 		printf("mutex error\n");
 	}
 	data->starttime = get_time();
+	printf("%lu\n", data->starttime);
 	return (0);
 }
 
@@ -147,34 +149,36 @@ void go_sleep(unsigned long time_to_sleep)
 	unsigned long start;
 
 	start = get_time();
-	time_to_sleep *= 1000;
-	while (get_time() - start < time_to_sleep)
+	//time_to_sleep *= 1000;
+	while ((get_time() - start) < time_to_sleep)
+	{
+		//printf("%lu %lu\n", (get_time() - start), time_to_sleep);
 		usleep(100);
+	}
 }
+
 void *start_thread(void *arg)
 {
 	t_philo *philo;
 	int eat;
 
 	philo = arg;
-	eat = -100;
+	eat = 0;
 	if (philo->id % 2 == 1)
 		usleep(200);
-	while (eat != philo->data->eat_times && chk_dead(philo) == 0) //&& chk_dead(philo) == 0)
+	while (eat != philo->data->eat_times && chk_dead(philo) == 0)
 	{
+		//printf("%d %d %d\n", eat, philo->data->eat_times, philo->id);
 		philo_write(philo, "is thinking");
-		//printf("%ld\t%d is thinking\n", get_time() - philo->data->starttime, philo->id);
 		if (get_fork(philo))
 			break ;
-		//go_sleep(philo->data->time_to_eat);
-		sleep(2);
+		go_sleep(philo->data->time_to_eat);
 		pthread_mutex_unlock(philo->lfork_mutex);
 		pthread_mutex_unlock(philo->rfork_mutex);
 		if (chk_dead(philo))
 			break ;
 		philo_write(philo, "is sleeping");
-		sleep(2);
-		//go_sleep(philo->data->time_to_sleep);
+		go_sleep(philo->data->time_to_sleep);
 		eat++;
 	}
 	return (NULL);
