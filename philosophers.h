@@ -21,6 +21,7 @@
 
 # define DEAD 0
 # define ALIVE 1
+# define DONE 2
 
 typedef struct	s_data
 {

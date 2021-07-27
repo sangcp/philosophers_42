@@ -37,6 +37,8 @@ int			chk_dead(t_philo *philo)
 	int ret;
 
 	ret = 0;
+	if ((get_time() - philo->last_ate) >= (unsigned long)philo->data->time_to_die)
+		philo->data->state = DEAD;
 	pthread_mutex_lock(&philo->data->state_mutex);
 	if (philo->data->state == DEAD)
 		ret = 1;
@@ -106,7 +108,6 @@ int parsing(t_data *data, int ac, char **av)
 		printf("mutex error\n");
 	}
 	data->starttime = get_time();
-	printf("%lu\n", data->starttime);
 	return (0);
 }
 
@@ -172,6 +173,11 @@ void *start_thread(void *arg)
 		philo_write(philo, "is thinking");
 		if (get_fork(philo))
 			break ;
+		pthread_mutex_lock(&philo->last_ate_mutex);
+		philo->last_ate = get_time();
+		pthread_mutex_unlock(&philo->last_ate_mutex);
+		philo_write(philo, "is eating");
+		eat++;
 		go_sleep(philo->data->time_to_eat);
 		pthread_mutex_unlock(philo->lfork_mutex);
 		pthread_mutex_unlock(philo->rfork_mutex);
@@ -179,11 +185,40 @@ void *start_thread(void *arg)
 			break ;
 		philo_write(philo, "is sleeping");
 		go_sleep(philo->data->time_to_sleep);
-		eat++;
 	}
+	pthread_mutex_lock(&philo->data->state_mutex);
+	if (philo->data->state == ALIVE)
+		philo->data->state = DONE;
+	pthread_mutex_unlock(&philo->data->state_mutex);
 	return (NULL);
 }
 
+int dead_chk(t_philo *philo, t_data *data)
+{
+	int i;
+
+	i = 0;
+	while (1)
+	{
+		usleep(100);
+		pthread_mutex_lock(&philo[i].last_ate_mutex);
+		if (get_time() - philo[i].last_ate >= (unsigned long)data->time_to_die)
+		{
+			pthread_mutex_lock(&data->state_mutex);
+			if (data->state != DONE)
+				data->state = DEAD;
+			if (data->state == DEAD)
+				philo_write(&philo[i], "has dead");
+			pthread_mutex_unlock(&data->state_mutex);
+			return (1);
+		}
+		pthread_mutex_unlock(&philo[i].last_ate_mutex);
+		i++;
+		if (i >= data->nb_phil)
+			i = 0;
+	}
+	return (0);
+}
 int set_thread(t_data *data, t_philo *philo, pthread_t *thread)
 {
 	int i;
@@ -197,6 +232,7 @@ int set_thread(t_data *data, t_philo *philo, pthread_t *thread)
 			return (1);
 		++i;
 	}
+	dead_chk(philo, data);
 	i = 0;
 	while (i < data->nb_phil)
 	{
