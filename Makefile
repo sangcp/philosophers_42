@@ -13,27 +13,16 @@
 
 NAME = philosopher
 
-FLAGS = -Wall -Wextra -Werror -pedantic
+FLAGS = -Wall -Wextra -Werror -pedantic -pthread
 
-ifeq ($(shell uname), Linux)
- CXX = gcc
- FLAGS += -pthread
-else
- CXX = clang
-endif
-ifdef REALG
- CXX = ~/.brew/bin/gcc-10
-endif
-ifdef DEBUG
- FLAGS += -g -fsanitize=address
-endif
+CC = gcc
 
-FILES =	main.c 
+FILES =	main.c utils.c parsing.c thread_utils.c start_thread.c
 
 all: $(NAME)
 
 $(NAME):
-	$(CXX) $(FILES) $(FLAGS) -o $(NAME)
+	$(CC) $(FILES) $(FLAGS) -o $(NAME)
 
 clean:
 	rm -rf $(NAME).dSYM
@@ -42,8 +31,3 @@ fclean: clean
 	rm -f $(NAME)
 
 re: fclean all
-
-debug: FLAGS += -g -fsanitize=thread
-debug: re
-	TSAN_OPTIONS=second_deadlock_stack=1 ./$(NAME) 4 410 200 200 2
-
